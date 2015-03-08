@@ -1,0 +1,29 @@
+[Unit]
+Description=Demo application v0.1.0
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/etc/environment
+EnvironmentFile=/etc/dns-domain
+Environment=IMAGE=marcelharkema/demo-application:0.1.0 CONTAINER=demo-application-v0.1.0
+TimeoutStartSec=0
+KillMode=none
+ExecStartPre=-/usr/bin/docker kill ${CONTAINER}
+ExecStartPre=-/usr/bin/docker rm ${CONTAINER}
+ExecStartPre=/bin/bash -c "/usr/bin/docker inspect ${IMAGE} &> /dev/null || /usr/bin/docker pull ${IMAGE}"
+ExecStart=/usr/bin/docker run \
+  --rm \
+  --name ${CONTAINER} \
+  -e SERVICE_ID=${CONTAINER}@%i \
+  -e SERVICE_NAME=${CONTAINER} \
+  -e SERVICE_FRONTEND_HOST_LOAD_BALANCER=${CONTAINER}.${DNS_DOMAIN} \
+  -P \
+  ${IMAGE}
+ExecStop=/usr/bin/docker stop ${CONTAINER}
+ExecStopPost=-/usr/bin/docker rm ${CONTAINER}
+Restart=always
+RestartSec=15s
+
+[X-Fleet]
+Conflicts=${CONTAINER}*.service

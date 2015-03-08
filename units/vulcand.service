@@ -1,0 +1,31 @@
+[Unit]
+Description=Vulcand service
+After=docker.service etcd.service
+Requires=docker.service etcd.service
+
+[Service]
+EnvironmentFile=/etc/environment
+Environment=IMAGE=mailgun/vulcand:v0.8.0-beta.2 CONTAINER=vulcand
+TimeoutStartSec=0
+KillMode=none
+ExecStartPre=-/usr/bin/docker kill ${CONTAINER}
+ExecStartPre=-/usr/bin/docker rm ${CONTAINER}
+ExecStartPre=/bin/bash -c "/usr/bin/docker inspect ${IMAGE} &> /dev/null || /usr/bin/docker pull ${IMAGE}"
+ExecStart=/bin/bash -c " \
+  ETCD_ENDPOINT=$(ifconfig docker0 | awk '/\<inet\>/ {print $2}'); \
+  exec /usr/bin/docker run \
+    --rm \
+    --name ${CONTAINER} \
+    -e SERVICE_IGNORE=yes \
+    -v /var/run/docker.sock:/tmp/docker.sock \
+    -p 80:8181 -p 8182:8182 \
+    ${IMAGE} \
+    /go/bin/vulcand -apiInterface=0.0.0.0 \
+    --etcd=http://$ETCD_ENDPOINT:4001"
+ExecStop=/usr/bin/docker stop ${CONTAINER}
+ExecStopPost=-/usr/bin/docker rm ${CONTAINER}
+Restart=always
+RestartSec=10s
+
+[X-Fleet]
+Global=true

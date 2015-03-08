@@ -1,0 +1,13 @@
+---
+- hostname: coreos-1.qahwah.io
+  image: coreos-alpha
+  memory: 1gb
+  region: ams3
+- hostname: coreos-2.qahwah.io
+  image: coreos-alpha
+  memory: 1gb
+  region: ams3
+- hostname: coreos-3.qahwah.io
+  image: coreos-alpha
+  memory: 1gb
+  region: ams3

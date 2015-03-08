@@ -1,0 +1,33 @@
+[Unit]
+Description=Service registry bridge (with Vulcand API v2 support) for Docker
+After=docker.service vulcand.service
+Requires=docker.service vulcand.service
+
+[Service]
+EnvironmentFile=/etc/environment
+Environment=IMAGE=marcelharkema/registrator-vulcand-health:dockergrunn CONTAINER=registrator-vulcand
+TimeoutStartSec=0
+KillMode=none
+ExecStartPre=-/usr/bin/docker kill ${CONTAINER}
+ExecStartPre=-/usr/bin/docker rm ${CONTAINER}
+ExecStartPre=/bin/bash -c "/usr/bin/docker inspect ${IMAGE} &> /dev/null || /usr/bin/docker pull ${IMAGE}"
+ExecStartPre=/bin/bash -c "/usr/bin/docker pull ${IMAGE}"
+ExecStart=/bin/bash -c " \
+  sleep 2; \
+  exec /usr/bin/docker run \
+    --rm \
+    --name ${CONTAINER} \
+    -v /var/run/docker.sock:/tmp/docker.sock \
+    -h %H \
+    ${IMAGE} \
+    -ip=${COREOS_PRIVATE_IPV4} \
+    -ttl=11 \
+    -ttl-refresh=5 \
+    vulcand2://${COREOS_PRIVATE_IPV4}:8182"
+ExecStop=/usr/bin/docker stop ${CONTAINER}
+ExecStopPost=-/usr/bin/docker rm ${CONTAINER}
+Restart=always
+RestartSec=10s
+
+[X-Fleet]
+Global=true
